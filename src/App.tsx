@@ -1,13 +1,5 @@
-<div style={{ position: "relative", height: "600px", overflow: "hidden" }}>
 
-  <LightRays />
-
-  <div style={{ position: "relative", zIndex: 20 }}>
-    {/* 기존 내용 그대로 아래로 내려가게 */}
-  </div>
-
-</div>
-
+import LightRays from "./LightRays";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import Home from "./components/Home";
@@ -66,9 +58,17 @@ export default function App() {
             <AiAssetPage setGnbTheme={setGnbTheme} />
           </PageTransition>
         ) : (
-          <PageTransition key="home">
-            <Home setGnbTheme={setGnbTheme} />
-          </PageTransition>
+         <PageTransition key="home">
+  <div style={{ position: "relative", height: "600px", overflow: "hidden" }}>
+    
+    <LightRays />
+
+    <div style={{ position: "relative", zIndex: 20 }}>
+      <Home setGnbTheme={setGnbTheme} />
+    </div>
+
+  </div>
+</PageTransition>
         )}
       </AnimatePresence>
       
