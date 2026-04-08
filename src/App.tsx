@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import Home from "./components/Home";
@@ -58,8 +57,8 @@ export default function App() {
           </PageTransition>
         ) : (
          <PageTransition key="home">
-  <Home setGnbTheme={setGnbTheme} />
-</PageTransition>
+            <Home setGnbTheme={setGnbTheme} />
+          </PageTransition>
         )}
       </AnimatePresence>
       
