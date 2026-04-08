@@ -1,3 +1,13 @@
+<div style={{ position: "relative", height: "600px", overflow: "hidden" }}>
+
+  <LightRays />
+
+  <div style={{ position: "relative", zIndex: 20 }}>
+    {/* 기존 내용 그대로 아래로 내려가게 */}
+  </div>
+
+</div>
+
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import Home from "./components/Home";
