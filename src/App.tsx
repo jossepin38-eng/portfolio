@@ -1,3 +1,4 @@
+import LightRays from "./LightRays";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import Home from "./components/Home";
