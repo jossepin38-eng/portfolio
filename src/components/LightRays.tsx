@@ -65,12 +65,12 @@ const fragment = /* glsl */ `
         
         // 밝기 증폭 및 맥박(pulse) 애니메이션 결합
         float pulse = sin(uTime * 1.5) * 0.15 + 0.85; // 0.7 ~ 1.0 사이로 진동
-        float alpha = intensity * falloff * topEdge * pulse;
+        float alpha = intensity * falloff * topEdge * pulse * 1.8;
         
         // 화이트 톤 기반, 은은한 투명도 조절
         vec3 color = vec3(0.95, 0.98, 1.0); // 아주 미세한 푸른빛이 도는 화이트
         
-        gl_FragColor = vec4(color, alpha * 0.6); // 최대 투명도 제한 (너무 과하지 않게)
+        gl_FragColor = vec4(color, alpha * 1.2); // 최대 투명도 제한 (너무 과하지 않게)
     }
 `;
 
