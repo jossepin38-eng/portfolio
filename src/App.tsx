@@ -73,7 +73,7 @@ export default function App() {
     mouseInfluence={0.1}
     noiseAmount={0}
     distortion={0}
-    className="absolute inset-0 z-0"
+    className="absolute inset-0 z-0 custom-rays"
     pulsating={false}
     fadeDistance={1}
     saturation={1}
