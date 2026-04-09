@@ -2,14 +2,18 @@ import { useRef, useEffect } from "react";
 import { Renderer, Program, Triangle, Mesh } from "ogl";
 
 const LightRays = () => {
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
+    if (!containerRef.current) return;
 
-    const renderer = new Renderer({ alpha: true });
+    const renderer = new Renderer({
+      dpr: Math.min(window.devicePixelRatio, 2),
+      alpha: true,
+    });
+
     const gl = renderer.gl;
-    ref.current.appendChild(gl.canvas);
+    containerRef.current.appendChild(gl.canvas);
 
     gl.canvas.style.width = "100%";
     gl.canvas.style.height = "100%";
@@ -30,26 +34,43 @@ const LightRays = () => {
 
         uniform float iTime;
         uniform vec2 iResolution;
+
         varying vec2 vUv;
+
+        float rayStrength(vec2 coord, vec2 origin) {
+          vec2 dir = coord - origin;
+          float angle = atan(dir.x, dir.y);
+          float dist = length(dir);
+
+          float rays = pow(
+            sin(angle * 6.0 + iTime * 0.4) * 0.5 + 0.5,
+            0.25
+          );
+
+          float falloff = smoothstep(1.5, 0.0, dist);
+
+          return rays * falloff;
+        }
 
         void main() {
           vec2 uv = vUv;
-          vec2 p = uv - vec2(0.5, 1.0);
 
-          float angle = atan(p.x, p.y);
-          float dist = length(p);
+          // TOP CENTER 기준
+          vec2 origin = vec2(0.5, 1.0);
 
-          float rays = pow(sin(angle * 6.0 + iTime * 0.3) * 0.5 + 0.5, 0.3);
+          float strength = rayStrength(uv, origin);
 
-          float glow = smoothstep(1.2, 0.0, dist);
+          // 중앙 집중 마스크
+          float mask = smoothstep(0.7, 0.2, abs(uv.x - 0.5));
 
-          float mask = smoothstep(0.6, 0.2, abs(uv.x - 0.5));
+          // 위쪽 강조
+          float fadeTop = smoothstep(1.0, 0.6, uv.y);
 
-          float intensity = rays * glow * mask;
+          float intensity = strength * mask * fadeTop;
 
           vec3 color = vec3(1.0);
 
-          gl_FragColor = vec4(color, intensity * 0.9);
+          gl_FragColor = vec4(color, intensity * 1.2);
         }
       `,
       uniforms: {
@@ -61,32 +82,39 @@ const LightRays = () => {
     const mesh = new Mesh(gl, { geometry, program });
 
     const resize = () => {
-      if (!ref.current) return;
-      renderer.setSize(ref.current.clientWidth, ref.current.clientHeight);
+      if (!containerRef.current) return;
+
+      const { clientWidth, clientHeight } = containerRef.current;
+      renderer.setSize(clientWidth, clientHeight);
+
       program.uniforms.iResolution.value = [
-        ref.current.clientWidth,
-        ref.current.clientHeight,
+        clientWidth,
+        clientHeight,
       ];
     };
 
     window.addEventListener("resize", resize);
     resize();
 
-    let id: number;
-    const loop = (t: number) => {
+    let animationId: number;
+
+    const update = (t: number) => {
       program.uniforms.iTime.value = t * 0.001;
       renderer.render({ scene: mesh });
-      id = requestAnimationFrame(loop);
+      animationId = requestAnimationFrame(update);
     };
-    loop(0);
+
+    animationId = requestAnimationFrame(update);
 
     return () => {
-      cancelAnimationFrame(id);
+      cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
   }, []);
 
-  return <div ref={ref} className="absolute inset-0 pointer-events-none" />;
+  return (
+    <div className="absolute top-0 left-0 w-full h-[600px] pointer-events-none z-[1]" ref={containerRef} />
+  );
 };
 
 export default LightRays;
