@@ -77,7 +77,9 @@ export default function App() {
     fadeDistance={1}
     saturation={1}
   />
-
+<h1 className="relative z-10 text-4xl">
+    타이틀
+  </h1>
 </div>
           </PageTransition>
         )}
