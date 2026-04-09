@@ -38,13 +38,15 @@ void main() {
     float angle = atan(dir.x, dir.y);
     float dist = length(dir);
 
-    float rays = sin(angle * 20.0 + uTime * 0.8) * 0.5 + 0.5;
+    float rays = sin(angle * 8.0 + uTime * 0.6) * 0.5 + 0.5;
 
-    float glow = smoothstep(1.2, 0.0, dist);
+    float glow = smoothstep(0.5, 0.0, dist);
 
     float noise = random(uv + uTime * 0.1) * 0.1;
 
-    float intensity = rays * glow + noise;
+    float horizontalMask = smoothstep(0.7, 0.3, abs(uv.x - 0.5));
+
+    float intensity = (rays * glow + noise) * horizontalMask;
 
     vec3 color = vec3(1.0);
 
