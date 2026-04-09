@@ -58,19 +58,9 @@ export default function App() {
           </PageTransition>
         ) : (
          <PageTransition key="home">
-           <div className="relative w-full h-[600px] overflow-hidden">
-
-  {/* LightRays는 뒤에 */}
-  <div className="absolute inset-0 z-0">
-    <LightRays />
-  </div>
-
-  {/* 실제 콘텐츠 */}
-  <div className="relative z-10">
+           
     <Home setGnbTheme={setGnbTheme} />
-  </div>
-
-</div>
+ 
           </PageTransition>
         )}
       </AnimatePresence>
