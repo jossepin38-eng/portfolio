@@ -58,13 +58,17 @@ export default function App() {
           </PageTransition>
         ) : (
          <PageTransition key="home">
-            <div style={{ position: "relative", height: "600px", overflow: "hidden" }}>
+           <div className="relative w-full h-[600px] overflow-hidden">
 
-          <LightRays />
+  {/* LightRays는 뒤에 */}
+  <div className="absolute inset-0 z-0">
+    <LightRays />
+  </div>
 
-          <div style={{ position: "relative", zIndex: 20 }}>
-          <Home setGnbTheme={setGnbTheme} />
-        </div>
+  {/* 실제 콘텐츠 */}
+  <div className="relative z-10">
+    <Home setGnbTheme={setGnbTheme} />
+  </div>
 
 </div>
           </PageTransition>
