@@ -1,28 +1,70 @@
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import HomeSection from './HomeSection';
-import AboutSection from './AboutSection';
-import IntroduceSection from './IntroduceSection';
-import BottomText from './BottomText';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, useScroll, useTransform, useMotionValueEvent } from 'motion/react';
 
-export default function Home() {
-  const introduceRef = useRef<HTMLDivElement>(null);
+import HomeSection from "./HomeSection";
+import AboutSection from "./AboutSection";
+import IntroduceSection from "./IntroduceSection";
+import BottomText from "./BottomText";
+
+export default function Home({ setGnbTheme }: { setGnbTheme: (theme: 'dark' | 'light') => void }) {
+  const [isHomeHidden, setIsHomeHidden] = useState(false);
+  const [vh, setVh] = useState(0);
+
+  useEffect(() => {
+    setVh(window.innerHeight);
+    const handleResize = () => setVh(window.innerHeight);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
-  // 스크롤에 따른 HomeSection 숨김 처리 로직 (기존 로직 유지)
-  const { scrollYProgress } = useScroll();
-  const isHomeHidden = useTransform(scrollYProgress, [0, 0.2], [false, true]);
-  const bottomTextY = useTransform(scrollYProgress, [0.8, 1], [100, 0]);
+  const { scrollY } = useScroll();
+
+  // BottomText Sync Logic:
+  // Trigger: About01 (centered in AboutSection) reaches middle of viewport.
+  // AboutSection is after HomeSection (sticky 100vh).
+  // AboutSection starts at doc pos 100vh.
+  // AboutSection Middle (where card is) is at 100vh + 50vh = 150vh.
+  // Viewport Middle is at scrollY + 50vh.
+  // Trigger when 150vh = scrollY + 50vh => scrollY = 100vh.
+  
+  const bottomTextY = useTransform(scrollY, (latest) => {
+      const trigger = vh * 1.0; 
+      if (latest < trigger) return 0;
+      return -(latest - trigger);
+  });
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const currentVh = vh || window.innerHeight;
+    
+    // Hide Home Logic
+    if (latest > currentVh * 0.5) {
+        setIsHomeHidden(true);
+    } else {
+        setIsHomeHidden(false);
+    }
+  });
+  
+  const introduceRef = useRef<HTMLDivElement>(null);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+      if (introduceRef.current) {
+          const rect = introduceRef.current.getBoundingClientRect();
+          if (rect.top <= 50) { 
+              setGnbTheme('light');
+          } else {
+              setGnbTheme('dark');
+          }
+      }
+  });
 
   return (
-    /* 1. 최상단 div에 overflow-x-hidden을 주어 
-         가로 스크롤 및 하단 유령 영역 발생을 원천 차단합니다. 
-    */
-    <div className="bg-[#0d0d0d] relative w-full min-h-screen overflow-x-hidden">
+    <div className="bg-[#0d0d0d] relative min-h-screen">
       
       {/* Home Section - Sticky */}
       <div className="sticky top-0 h-screen z-0 overflow-hidden">
          <motion.div 
-            style={{ opacity: isHomeHidden ? 0 : 1 }} 
+            animate={{ opacity: isHomeHidden ? 0 : 1 }} 
+            transition={{ duration: 0.5 }}
             className="size-full"
          >
              <HomeSection />
@@ -31,7 +73,6 @@ export default function Home() {
 
       {/* Scrolling Content Overlay */}
       <div className="relative z-10 flex flex-col">
-        {/* AboutSection이 시작되는 지점 */}
         <AboutSection />
         
         <div ref={introduceRef} className="bg-white">
@@ -42,4 +83,4 @@ export default function Home() {
       <BottomText y={bottomTextY} />
     </div>
   );
-} // <--- 이 부분의 닫는 중괄호가 빠졌을 가능성이 큽니다.
+}
