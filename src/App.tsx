@@ -60,8 +60,9 @@ export default function App() {
          <PageTransition key="home">
            
     <Home setGnbTheme={setGnbTheme} />
-<div className="relative h-[600px] flex items-center justify-center">
+<div className="relative h-screen flex items-center justify-center">
 
+  {/* 배경 */}
   <LightRays
     raysOrigin="top-center"
     raysColor="#ffffff"
@@ -77,9 +78,12 @@ export default function App() {
     fadeDistance={1}
     saturation={1}
   />
-<h1 className="relative z-10 text-4xl">
+
+  {/* 타이틀 (같은 부모 안!) */}
+  <h1 className="relative z-10 text-5xl text-center">
     타이틀
   </h1>
+
 </div>
           </PageTransition>
         )}
