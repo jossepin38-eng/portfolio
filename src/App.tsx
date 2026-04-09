@@ -1,4 +1,3 @@
-import LightRays from "./components/LightRays";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "motion/react";
 import Home from "./components/Home";
@@ -57,34 +56,8 @@ export default function App() {
             <AiAssetPage setGnbTheme={setGnbTheme} />
           </PageTransition>
         ) : (
-         <PageTransition key="home">
-           
-    <Home setGnbTheme={setGnbTheme} />
-<div className="relative h-screen flex items-center justify-center">
-
-  {/* 배경 */}
-  <LightRays
-    raysOrigin="top-center"
-    raysColor="#ffffff"
-    raysSpeed={1}
-    lightSpread={0.5}
-    rayLength={3}
-    followMouse={true}
-    mouseInfluence={0.1}
-    noiseAmount={0}
-    distortion={0}
-    className="absolute inset-0 z-0 custom-rays"
-    pulsating={false}
-    fadeDistance={1}
-    saturation={1}
-  />
-
-  {/* 타이틀 (같은 부모 안!) */}
-  <h1 className="relative z-10 text-5xl text-center">
-    타이틀
-  </h1>
-
-</div>
+          <PageTransition key="home">
+            <Home setGnbTheme={setGnbTheme} />
           </PageTransition>
         )}
       </AnimatePresence>
