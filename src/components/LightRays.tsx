@@ -19,60 +19,36 @@ const vertex = /* glsl */ `
     }
 `;
 
-const fragment = /* glsl */ `
-    precision highp float;
-    
-    uniform float uTime;
-    varying vec2 vUv;
-    
-    // 단순한 노이즈 함수 대신 삼각함수를 조합하여 부드러운 파동 생성 (가벼움)
-    float wave(vec2 p, float time) {
-        float x = p.x;
-        float y = p.y;
-        float val = sin(x * 10.0 + time) * cos(x * 15.0 - time * 0.5) * 0.5 + 0.5;
-        // 중심축(x=0.5)으로 갈수록 강해지게
-        float centerDist = abs(x - 0.5) * 2.0; 
-        val *= smoothstep(1.0, 0.0, centerDist);
-        return val;
-    }
+precision highp float;
 
-    void main() {
-        vec2 uv = vUv;
-        
-        // 시간 기반 부드러운 일렁임 (맥박)
-        float t = uTime * 0.5;
-        
-        // 빛의 중심축 생성
-        float centerDist = abs(uv.x - 0.5);
-        
-        // y축을 따라 퍼지는 형태 (위가 좁고 아래가 넓게 퍼지는 원뿔/가우시안 유사 느낌)
-        float spread = uv.y * 1.5 + 0.5;
-        float beam = smoothstep(spread * 0.5, 0.0, centerDist);
-        
-        // 여러 겹의 빛 레이어 (단순화된 파동)
-        float rays = wave(vec2(uv.x, uv.y), t) * 0.5 
-                   + wave(vec2(uv.x * 0.8 + 0.1, uv.y), t * 1.2) * 0.3
-                   + wave(vec2(uv.x * 1.2 - 0.1, uv.y), t * 0.8) * 0.2;
-                   
-        // 최종 형태 조합
-        float intensity = beam * rays;
-        
-        // y축 위에서 아래로 서서히 사라지는 그라데이션 (마스크 효과)
-        float falloff = smoothstep(1.0, 0.2, uv.y);
-        
-        // 위쪽 가장자리 경계를 부드럽게 깎아냄
-        float topEdge = smoothstep(0.0, 0.1, uv.y);
-        
-        // 밝기 증폭 및 맥박(pulse) 애니메이션 결합
-        float pulse = sin(uTime * 1.5) * 0.15 + 0.85; // 0.7 ~ 1.0 사이로 진동
-        float alpha = intensity * falloff * topEdge * pulse * 1.8;
-        
-        // 화이트 톤 기반, 은은한 투명도 조절
-        vec3 color = vec3(0.95, 0.98, 1.0); // 아주 미세한 푸른빛이 도는 화이트
-        
-        gl_FragColor = vec4(color, alpha * 1.2); // 최대 투명도 제한 (너무 과하지 않게)
-    }
-`;
+uniform float uTime;
+varying vec2 vUv;
+
+float random(vec2 st) {
+    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.545);
+}
+
+void main() {
+    vec2 uv = vUv;
+
+    vec2 center = vec2(0.5, 0.0);
+    vec2 dir = uv - center;
+
+    float angle = atan(dir.x, dir.y);
+    float dist = length(dir);
+
+    float rays = sin(angle * 20.0 + uTime * 0.8) * 0.5 + 0.5;
+
+    float glow = smoothstep(0.8, 0.0, dist);
+
+    float noise = random(uv + uTime * 0.1) * 0.1;
+
+    float intensity = rays * glow + noise;
+
+    vec3 color = vec3(1.0);
+
+    gl_FragColor = vec4(color, intensity * 0.6);
+}
 
 const LightRays = () => {
   const containerRef = useRef<HTMLDivElement>(null);
