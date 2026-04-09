@@ -65,7 +65,7 @@ export default function Home({ setGnbTheme }: { setGnbTheme: (theme: 'dark' | 'l
          <motion.div 
             animate={{ opacity: isHomeHidden ? 0 : 1 }} 
             transition={{ duration: 0.5 }}
-            className="size-full"
+            className=""w-full h-full relative""
          >
              <HomeSection />
          </motion.div>
