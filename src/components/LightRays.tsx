@@ -1,189 +1,397 @@
-import React, { useRef, useEffect } from "react";
-import {
-  Renderer,
-  Camera,
-  Transform,
-  Program,
-  Mesh,
-  Triangle,
-} from "ogl";
+import { useRef, useEffect, useState } from 'react';
+import { Renderer, Program, Triangle, Mesh } from 'ogl';
 
-// 셰이더 정의
-const vertex = /* glsl */ `
-    attribute vec2 position;
-    attribute vec2 uv;
-    varying vec2 vUv;
-    void main() {
-        vUv = uv;
-        gl_Position = vec4(position, 0, 1);
-    }
-`;
+const DEFAULT_COLOR = '#ffffff';
 
-const fragment = /* glsl */ `
-    precision highp float;
-    
-    uniform float uTime;
-    varying vec2 vUv;
-    
-    // 단순한 노이즈 함수 대신 삼각함수를 조합하여 부드러운 파동 생성 (가벼움)
-    float wave(vec2 p, float time) {
-        float x = p.x;
-        float y = p.y;
-        float val = sin(x * 10.0 + time) * cos(x * 15.0 - time * 0.5) * 0.5 + 0.5;
-        // 중심축(x=0.5)으로 갈수록 강해지게
-        float centerDist = abs(x - 0.5) * 2.0; 
-        val *= smoothstep(1.0, 0.0, centerDist);
-        return val;
-    }
+const hexToRgb = hex => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
+};
 
-    void main() {
-        vec2 uv = vUv;
-        
-        // 시간 기반 부드러운 일렁임 (맥박)
-        float t = uTime * 0.5;
-        
-        // 빛의 중심축 생성
-        float centerDist = abs(uv.x - 0.5);
-        
-        // y축을 따라 퍼지는 형태 (위가 좁고 아래가 넓게 퍼지는 원뿔/가우시안 유사 느낌)
-        float spread = uv.y * 1.5 + 0.5;
-        float beam = smoothstep(spread * 0.5, 0.0, centerDist);
-        
-        // 여러 겹의 빛 레이어 (단순화된 파동)
-        float rays = wave(vec2(uv.x, uv.y), t) * 0.5 
-                   + wave(vec2(uv.x * 0.8 + 0.1, uv.y), t * 1.2) * 0.3
-                   + wave(vec2(uv.x * 1.2 - 0.1, uv.y), t * 0.8) * 0.2;
-                   
-        // 최종 형태 조합
-        float intensity = beam * rays;
-        
-        // y축 위에서 아래로 서서히 사라지는 그라데이션 (마스크 효과)
-        float falloff = smoothstep(1.0, 0.2, uv.y);
-        
-        // 위쪽 가장자리 경계를 부드럽게 깎아냄
-        float topEdge = smoothstep(0.0, 0.1, uv.y);
-        
-        // 밝기 증폭 및 맥박(pulse) 애니메이션 결합
-        float pulse = sin(uTime * 1.5) * 0.15 + 0.85; // 0.7 ~ 1.0 사이로 진동
-        float alpha = intensity * falloff * topEdge * pulse;
-        
-        // 화이트 톤 기반, 은은한 투명도 조절
-        vec3 color = vec3(0.95, 0.98, 1.0); // 아주 미세한 푸른빛이 도는 화이트
-        
-        gl_FragColor = vec4(color, alpha * 0.6); // 최대 투명도 제한 (너무 과하지 않게)
-    }
-`;
+const getAnchorAndDir = (origin, w, h) => {
+  const outside = 0.2;
+  switch (origin) {
+    case 'top-left':
+      return { anchor: [0, -outside * h], dir: [0, 1] };
+    case 'top-right':
+      return { anchor: [w, -outside * h], dir: [0, 1] };
+    case 'left':
+      return { anchor: [-outside * w, 0.5 * h], dir: [1, 0] };
+    case 'right':
+      return { anchor: [(1 + outside) * w, 0.5 * h], dir: [-1, 0] };
+    case 'bottom-left':
+      return { anchor: [0, (1 + outside) * h], dir: [0, -1] };
+    case 'bottom-center':
+      return { anchor: [0.5 * w, (1 + outside) * h], dir: [0, -1] };
+    case 'bottom-right':
+      return { anchor: [w, (1 + outside) * h], dir: [0, -1] };
+    default: // "top-center"
+      return { anchor: [0.5 * w, -outside * h], dir: [0, 1] };
+  }
+};
 
-const LightRays = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+const LightRays = ({
+  raysOrigin = 'top-center',
+  raysColor = DEFAULT_COLOR,
+  raysSpeed = 1,
+  lightSpread = 1,
+  rayLength = 2,
+  pulsating = false,
+  fadeDistance = 1.0,
+  saturation = 1.0,
+  followMouse = true,
+  mouseInfluence = 0.1,
+  noiseAmount = 0.0,
+  distortion = 0.0,
+  className = ''
+}) => {
+  const containerRef = useRef(null);
+  const uniformsRef = useRef(null);
+  const rendererRef = useRef(null);
+  const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const smoothMouseRef = useRef({ x: 0.5, y: 0.5 });
+  const animationIdRef = useRef(null);
+  const meshRef = useRef(null);
+  const cleanupFunctionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const observerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const container = containerRef.current;
 
-    // 성능 최적화: 해상도 비율 제한
-    const dpr = Math.min(window.devicePixelRatio, 1.5);
-
-    // OGL 초기화: 알파 채널(투명도) 허용
-    const renderer = new Renderer({ alpha: true, dpr });
-    const gl = renderer.gl;
-    container.appendChild(gl.canvas);
-
-    // 캔버스 스타일 (절대 투명)
-    gl.canvas.style.position = "absolute";
-    gl.canvas.style.top = "0";
-    gl.canvas.style.left = "0";
-    gl.canvas.style.width = "100%";
-    gl.canvas.style.height = "100%";
-    gl.canvas.style.pointerEvents = "none";
-
-    const camera = new Camera(gl);
-    camera.position.z = 1;
-
-    const scene = new Transform();
-
-    // 뷰포트를 채우는 단순한 삼각형 메쉬 (퍼포먼스 최고)
-    const geometry = new Triangle(gl);
-
-    const program = new Program(gl, {
-      vertex,
-      fragment,
-      uniforms: {
-        uTime: { value: 0 },
-      },
-      transparent: true,
-      // Add blending for soft glowing effect
-      blendFunc: { src: gl.SRC_ALPHA, dst: gl.ONE },
-    });
-
-    const mesh = new Mesh(gl, { geometry, program });
-    mesh.setParent(scene);
-
-    let animationId: number;
-    let isVisible = false;
-
-    const resize = () => {
-      if (!container) return;
-      // 부모 컨테이너 크기에 맞춤
-      renderer.setSize(
-        container.clientWidth,
-        container.clientHeight,
-      );
-    };
-
-    window.addEventListener("resize", resize, false);
-    resize();
-
-    // 렌더 루프
-    const update = (t: number) => {
-      if (!isVisible) return; // 화면 밖이면 연산 완전 중단
-
-      program.uniforms.uTime.value = t * 0.001;
-      renderer.render({ scene, camera });
-      animationId = requestAnimationFrame(update);
-    };
-
-    // IntersectionObserver로 가시성 체크 (성능 최적화의 핵심)
-    const observer = new IntersectionObserver(
-      (entries) => {
+    observerRef.current = new IntersectionObserver(
+      entries => {
         const entry = entries[0];
-        if (entry.isIntersecting) {
-          if (!isVisible) {
-            isVisible = true;
-            animationId = requestAnimationFrame(update);
-          }
-        } else {
-          isVisible = false;
-          cancelAnimationFrame(animationId);
-        }
+        setIsVisible(entry.isIntersecting);
       },
-      {
-        threshold: 0, // 단 1픽셀이라도 보이면 켜고, 완전히 사라지면 끔
-      },
+      { threshold: 0.1 }
     );
 
-    observer.observe(container);
+    observerRef.current.observe(containerRef.current);
 
     return () => {
-      observer.disconnect();
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", resize);
-      if (container && gl.canvas.parentNode === container) {
-        container.removeChild(gl.canvas);
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
       }
     };
   }, []);
 
+  useEffect(() => {
+    if (!isVisible || !containerRef.current) return;
+
+    if (cleanupFunctionRef.current) {
+      cleanupFunctionRef.current();
+      cleanupFunctionRef.current = null;
+    }
+
+    const initializeWebGL = async () => {
+      if (!containerRef.current) return;
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      if (!containerRef.current) return;
+
+      const renderer = new Renderer({
+        dpr: Math.min(window.devicePixelRatio, 2),
+        alpha: true
+      });
+      rendererRef.current = renderer;
+
+      const gl = renderer.gl;
+      gl.canvas.style.width = '100%';
+      gl.canvas.style.height = '100%';
+
+      while (containerRef.current.firstChild) {
+        containerRef.current.removeChild(containerRef.current.firstChild);
+      }
+      containerRef.current.appendChild(gl.canvas);
+
+      const vert = `
+attribute vec2 position;
+varying vec2 vUv;
+void main() {
+  vUv = position * 0.5 + 0.5;
+  gl_Position = vec4(position, 0.0, 1.0);
+}`;
+
+      const frag = `precision highp float;
+
+uniform float iTime;
+uniform vec2  iResolution;
+
+uniform vec2  rayPos;
+uniform vec2  rayDir;
+uniform vec3  raysColor;
+uniform float raysSpeed;
+uniform float lightSpread;
+uniform float rayLength;
+uniform float pulsating;
+uniform float fadeDistance;
+uniform float saturation;
+uniform vec2  mousePos;
+uniform float mouseInfluence;
+uniform float noiseAmount;
+uniform float distortion;
+
+varying vec2 vUv;
+
+float noise(vec2 st) {
+  return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+float rayStrength(vec2 raySource, vec2 rayRefDirection, vec2 coord,
+                  float seedA, float seedB, float speed) {
+  vec2 sourceToCoord = coord - raySource;
+  vec2 dirNorm = normalize(sourceToCoord);
+  float cosAngle = dot(dirNorm, rayRefDirection);
+
+  float distortedAngle = cosAngle + distortion * sin(iTime * 2.0 + length(sourceToCoord) * 0.01) * 0.2;
+  
+  float spreadFactor = pow(max(distortedAngle, 0.0), 1.0 / max(lightSpread, 0.001));
+
+  float distance = length(sourceToCoord);
+  float maxDistance = iResolution.x * rayLength;
+  float lengthFalloff = clamp((maxDistance - distance) / maxDistance, 0.0, 1.0);
+  
+  float fadeFalloff = clamp((iResolution.x * fadeDistance - distance) / (iResolution.x * fadeDistance), 0.5, 1.0);
+  float pulse = pulsating > 0.5 ? (0.8 + 0.2 * sin(iTime * speed * 3.0)) : 1.0;
+
+  float baseStrength = clamp(
+    (0.45 + 0.15 * sin(distortedAngle * seedA + iTime * speed)) +
+    (0.3 + 0.2 * cos(-distortedAngle * seedB + iTime * speed)),
+    0.0, 1.0
+  );
+
+  return baseStrength * lengthFalloff * fadeFalloff * spreadFactor * pulse;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 coord = vec2(fragCoord.x, iResolution.y - fragCoord.y);
+  
+  vec2 finalRayDir = rayDir;
+  if (mouseInfluence > 0.0) {
+    vec2 mouseScreenPos = mousePos * iResolution.xy;
+    vec2 mouseDirection = normalize(mouseScreenPos - rayPos);
+    finalRayDir = normalize(mix(rayDir, mouseDirection, mouseInfluence));
+  }
+
+  vec4 rays1 = vec4(1.0) *
+               rayStrength(rayPos, finalRayDir, coord, 36.2214, 21.11349,
+                           1.5 * raysSpeed);
+  vec4 rays2 = vec4(1.0) *
+               rayStrength(rayPos, finalRayDir, coord, 22.3991, 18.0234,
+                           1.1 * raysSpeed);
+
+  fragColor = rays1 * 0.5 + rays2 * 0.4;
+
+  if (noiseAmount > 0.0) {
+    float n = noise(coord * 0.01 + iTime * 0.1);
+    fragColor.rgb *= (1.0 - noiseAmount + noiseAmount * n);
+  }
+
+  float brightness = 1.0 - (coord.y / iResolution.y);
+  fragColor.x *= 0.1 + brightness * 0.8;
+  fragColor.y *= 0.3 + brightness * 0.6;
+  fragColor.z *= 0.5 + brightness * 0.5;
+
+  if (saturation != 1.0) {
+    float gray = dot(fragColor.rgb, vec3(0.299, 0.587, 0.114));
+    fragColor.rgb = mix(vec3(gray), fragColor.rgb, saturation);
+  }
+
+  fragColor.rgb *= raysColor;
+}
+
+void main() {
+  vec4 color;
+  mainImage(color, gl_FragCoord.xy);
+  gl_FragColor  = color;
+}`;
+
+      const uniforms = {
+        iTime: { value: 0 },
+        iResolution: { value: [1, 1] },
+
+        rayPos: { value: [0, 0] },
+        rayDir: { value: [0, 1] },
+
+        raysColor: { value: hexToRgb(raysColor) },
+        raysSpeed: { value: raysSpeed },
+        lightSpread: { value: lightSpread },
+        rayLength: { value: rayLength },
+        pulsating: { value: pulsating ? 1.0 : 0.0 },
+        fadeDistance: { value: fadeDistance },
+        saturation: { value: saturation },
+        mousePos: { value: [0.5, 0.5] },
+        mouseInfluence: { value: mouseInfluence },
+        noiseAmount: { value: noiseAmount },
+        distortion: { value: distortion }
+      };
+      uniformsRef.current = uniforms;
+
+      const geometry = new Triangle(gl);
+      const program = new Program(gl, { vertex: vert, fragment: frag, uniforms });
+      const mesh = new Mesh(gl, { geometry, program });
+      meshRef.current = mesh;
+
+      const updatePlacement = () => {
+        if (!containerRef.current || !renderer) return;
+
+        renderer.dpr = Math.min(window.devicePixelRatio, 2);
+
+        const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
+        renderer.setSize(wCSS, hCSS);
+
+        const dpr = renderer.dpr;
+        const w = wCSS * dpr;
+        const h = hCSS * dpr;
+
+        uniforms.iResolution.value = [w, h];
+
+        const { anchor, dir } = getAnchorAndDir(raysOrigin, w, h);
+        uniforms.rayPos.value = anchor;
+        uniforms.rayDir.value = dir;
+      };
+
+      const loop = t => {
+        if (!rendererRef.current || !uniformsRef.current || !meshRef.current) {
+          return;
+        }
+
+        uniforms.iTime.value = t * 0.001;
+
+        if (followMouse && mouseInfluence > 0.0) {
+          const smoothing = 0.92;
+
+          smoothMouseRef.current.x = smoothMouseRef.current.x * smoothing + mouseRef.current.x * (1 - smoothing);
+          smoothMouseRef.current.y = smoothMouseRef.current.y * smoothing + mouseRef.current.y * (1 - smoothing);
+
+          uniforms.mousePos.value = [smoothMouseRef.current.x, smoothMouseRef.current.y];
+        }
+
+        try {
+          renderer.render({ scene: mesh });
+          animationIdRef.current = requestAnimationFrame(loop);
+        } catch (error) {
+          console.warn('WebGL rendering error:', error);
+          return;
+        }
+      };
+
+      window.addEventListener('resize', updatePlacement);
+      updatePlacement();
+      animationIdRef.current = requestAnimationFrame(loop);
+
+      cleanupFunctionRef.current = () => {
+        if (animationIdRef.current) {
+          cancelAnimationFrame(animationIdRef.current);
+          animationIdRef.current = null;
+        }
+
+        window.removeEventListener('resize', updatePlacement);
+
+        if (renderer) {
+          try {
+            const canvas = renderer.gl.canvas;
+            const loseContextExt = renderer.gl.getExtension('WEBGL_lose_context');
+            if (loseContextExt) {
+              loseContextExt.loseContext();
+            }
+
+            if (canvas && canvas.parentNode) {
+              canvas.parentNode.removeChild(canvas);
+            }
+          } catch (error) {
+            console.warn('Error during WebGL cleanup:', error);
+          }
+        }
+
+        rendererRef.current = null;
+        uniformsRef.current = null;
+        meshRef.current = null;
+      };
+    };
+
+    initializeWebGL();
+
+    return () => {
+      if (cleanupFunctionRef.current) {
+        cleanupFunctionRef.current();
+        cleanupFunctionRef.current = null;
+      }
+    };
+  }, [
+    isVisible,
+    raysOrigin,
+    raysColor,
+    raysSpeed,
+    lightSpread,
+    rayLength,
+    pulsating,
+    fadeDistance,
+    saturation,
+    followMouse,
+    mouseInfluence,
+    noiseAmount,
+    distortion
+  ]);
+
+  useEffect(() => {
+    if (!uniformsRef.current || !containerRef.current || !rendererRef.current) return;
+
+    const u = uniformsRef.current;
+    const renderer = rendererRef.current;
+
+    u.raysColor.value = hexToRgb(raysColor);
+    u.raysSpeed.value = raysSpeed;
+    u.lightSpread.value = lightSpread;
+    u.rayLength.value = rayLength;
+    u.pulsating.value = pulsating ? 1.0 : 0.0;
+    u.fadeDistance.value = fadeDistance;
+    u.saturation.value = saturation;
+    u.mouseInfluence.value = mouseInfluence;
+    u.noiseAmount.value = noiseAmount;
+    u.distortion.value = distortion;
+
+    const { clientWidth: wCSS, clientHeight: hCSS } = containerRef.current;
+    const dpr = renderer.dpr;
+    const { anchor, dir } = getAnchorAndDir(raysOrigin, wCSS * dpr, hCSS * dpr);
+    u.rayPos.value = anchor;
+    u.rayDir.value = dir;
+  }, [
+    raysColor,
+    raysSpeed,
+    lightSpread,
+    raysOrigin,
+    rayLength,
+    pulsating,
+    fadeDistance,
+    saturation,
+    mouseInfluence,
+    noiseAmount,
+    distortion
+  ]);
+
+  useEffect(() => {
+    const handleMouseMove = e => {
+      if (!containerRef.current || !rendererRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      mouseRef.current = { x, y };
+    };
+
+    if (followMouse) {
+      window.addEventListener('mousemove', handleMouseMove);
+      return () => window.removeEventListener('mousemove', handleMouseMove);
+    }
+  }, [followMouse]);
+
   return (
     <div
       ref={containerRef}
-      className="absolute top-0 left-0 w-full h-[600px] z-[1] pointer-events-none overflow-hidden"
-      style={{
-        maskImage:
-          "linear-gradient(to bottom, black 60%, transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to bottom, black 60%, transparent 100%)",
-      }}
+      className={`w-full h-full pointer-events-none z-[3] overflow-hidden relative ${className}`.trim()}
     />
   );
 };
