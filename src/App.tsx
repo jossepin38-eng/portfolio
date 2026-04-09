@@ -60,7 +60,13 @@ export default function App() {
          <PageTransition key="home">
            
     <Home setGnbTheme={setGnbTheme} />
- 
+ <div className="relative h-[600px] overflow-hidden">
+  <LightRays />
+
+  <div className="relative z-10">
+    {/* 기존 콘텐츠 */}
+  </div>
+</div>
           </PageTransition>
         )}
       </AnimatePresence>
