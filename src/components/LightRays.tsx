@@ -177,7 +177,7 @@ const LightRays = () => {
   return (
     <div
       ref={containerRef}
-      className="absolute top-0 left-0 w-full h-[600px] z-[1] pointer-events-none overflow-hidden"
+      className="absolute top-0 left-0 w-full h-[600px] z-0 pointer-events-none overflow-hidden"
       style={{
         maskImage:
           "linear-gradient(to bottom, black 60%, transparent 100%)",
