@@ -200,4 +200,4 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
       </div>
     </div>
   );
-}
+} // <--- 이 닫는 중괄호가 빠졌는지 확인이 필요했습니다.
