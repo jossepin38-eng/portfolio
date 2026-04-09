@@ -26,7 +26,7 @@ const LightRays = () => {
         varying vec2 vUv;
         void main() {
           vUv = position * 0.5 + 0.5;
-          gl_Position = vec4(position, 0, 1);
+          gl_Position = vec4(position, 0.0, 1.0);
         }
       `,
       fragment: `
@@ -34,20 +34,17 @@ const LightRays = () => {
 
         uniform float iTime;
         uniform vec2 iResolution;
-
         varying vec2 vUv;
 
-        float rayStrength(vec2 coord, vec2 origin) {
-          vec2 dir = coord - origin;
+        float ray(vec2 uv, vec2 origin, float seed, float speed) {
+          vec2 dir = uv - origin;
           float angle = atan(dir.x, dir.y);
           float dist = length(dir);
 
-          float rays = pow(
-            sin(angle * 6.0 + iTime * 0.4) * 0.5 + 0.5,
-            0.25
-          );
+          float wave = sin(angle * seed + iTime * speed) * 0.5 + 0.5;
+          float rays = pow(wave, 0.2);
 
-          float falloff = smoothstep(1.5, 0.0, dist);
+          float falloff = smoothstep(1.2, 0.0, dist);
 
           return rays * falloff;
         }
@@ -55,22 +52,26 @@ const LightRays = () => {
         void main() {
           vec2 uv = vUv;
 
-          // TOP CENTER 기준
+          // TOP CENTER
           vec2 origin = vec2(0.5, 1.0);
 
-          float strength = rayStrength(uv, origin);
+          // 레이어 2개 (핵심)
+          float r1 = ray(uv, origin, 6.0, 0.4);
+          float r2 = ray(uv, origin, 10.0, 0.2);
 
-          // 중앙 집중 마스크
-          float mask = smoothstep(0.7, 0.2, abs(uv.x - 0.5));
+          float rays = r1 * 0.6 + r2 * 0.4;
+
+          // 중앙 집중
+          float mask = smoothstep(0.75, 0.25, abs(uv.x - 0.5));
 
           // 위쪽 강조
           float fadeTop = smoothstep(1.0, 0.6, uv.y);
 
-          float intensity = strength * mask * fadeTop;
+          float intensity = rays * mask * fadeTop;
 
           vec3 color = vec3(1.0);
 
-          gl_FragColor = vec4(color, intensity * 1.2);
+          gl_FragColor = vec4(color, intensity * 1.5);
         }
       `,
       uniforms: {
@@ -113,7 +114,10 @@ const LightRays = () => {
   }, []);
 
   return (
-    <div className="absolute top-0 left-0 w-full h-[600px] pointer-events-none z-[1]" ref={containerRef} />
+    <div
+      ref={containerRef}
+      className="absolute top-0 left-0 w-full h-[600px] pointer-events-none z-[1]"
+    />
   );
 };
 
