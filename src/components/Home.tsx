@@ -57,30 +57,31 @@ export default function Home({ setGnbTheme }: { setGnbTheme: (theme: 'dark' | 'l
       }
   });
 
+// Home.tsx 수정
 return (
-    <div className="bg-[#0d0d0d] relative min-h-screen">
-      
-      {/* Home Section - Sticky */}
-      <div className="sticky top-0 h-screen z-0 overflow-hidden">
-         <motion.div 
-            animate={{ opacity: isHomeHidden ? 0 : 1 }} 
-            transition={{ duration: 0.5 }}
-            className="size-full"
-         >
-             <HomeSection />
-         </motion.div>
-      </div>
-
-      {/* Scrolling Content Overlay */}
-      <div className="relative z-10 flex flex-col">
-        <AboutSection />
-        
-        <div ref={introduceRef} className="bg-white">
-            <IntroduceSection />
-        </div>
-      </div>
-
-      <BottomText y={bottomTextY} />
+  /* 핵심: overflow-hidden을 추가하여 자식이 화면 밖으로 늘어나는 것을 원천 차단 */
+  <div className="bg-[#0d0d0d] relative w-full h-screen overflow-hidden">
+    
+    {/* Home Section - Sticky */}
+    <div className="sticky top-0 h-screen z-0 overflow-hidden">
+       <motion.div 
+          animate={{ opacity: isHomeHidden ? 0 : 1 }} 
+          transition={{ duration: 0.5 }}
+          className="size-full"
+       >
+           <HomeSection />
+       </motion.div>
     </div>
-  );
-}
+
+    {/* Scrolling Content Overlay */}
+    <div className="relative z-10 flex flex-col">
+      <AboutSection />
+      
+      <div ref={introduceRef} className="bg-white">
+          <IntroduceSection />
+      </div>
+    </div>
+
+    <BottomText y={bottomTextY} />
+  </div>
+);
