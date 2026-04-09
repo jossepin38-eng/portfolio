@@ -61,7 +61,7 @@ export default function Home({ setGnbTheme }: { setGnbTheme: (theme: 'dark' | 'l
     <div className="bg-[#0d0d0d] relative min-h-screen">
       
       {/* Home Section - Sticky */}
-      <div className="sticky top-0 h-screen z-0 overflow-hidden">
+      <div className="sticky top-0 h-screen z-0">
          <motion.div 
             animate={{ opacity: isHomeHidden ? 0 : 1 }} 
             transition={{ duration: 0.5 }}
