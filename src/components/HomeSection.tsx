@@ -183,16 +183,16 @@ function HeroArea() {
 
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
-   // HomeSection.tsx 하단부 수정
-<div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden">
+    // 최상위 컨테이너: h-screen과 overflow-hidden으로 영역을 확실히 고정합니다.
+    <div 
+      style={style} 
+      className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden"
+    >
 
-  {/* 1. LightRays 전용 컨테이너: h-full w-full을 명시하여 부모를 벗어나지 않게 함 */}
-  <div className="absolute inset-0 z-0 pointer-events-none w-full h-full overflow-hidden">
-    <LightRays />
-  </div>
-  
-  {/* ... 생략 ... */}
-</div>
+      {/* 1. LightRays 배경 레이어: 부모를 절대 벗어나지 않도록 absolute와 overflow-hidden 적용 */}
+      <div className="absolute inset-0 z-0 pointer-events-none w-full h-full overflow-hidden">
+        <LightRays />
+      </div>
       
       {/* 2. Background Gradient Overlay */}
       <motion.div 
@@ -211,11 +211,11 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
         }}
       />
 
-      {/* 3. 실제 콘텐츠: 정중앙 정렬 유지 */}
+      {/* 3. 실제 콘텐츠: z-20으로 가장 위에 올리고 중앙 정렬 */}
       <div className="relative z-20 w-full flex justify-center items-center">
         <HeroArea />
       </div>
 
-    </div>
+    </div> // 최상위 컨테이너 닫기
   );
 }
