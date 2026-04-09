@@ -57,27 +57,17 @@ export default function Home({ setGnbTheme }: { setGnbTheme: (theme: 'dark' | 'l
       }
   });
 
- // ... 상단 import 생략 (isHomeHidden, bottomTextY, introduceRef 등이 정의되어 있어야 함)
-
-export default function Home() {
-  // ... 로직 코드 생략
-
-  return (
+return (
     <div className="bg-[#0d0d0d] relative min-h-screen">
       
       {/* Home Section - Sticky */}
-      <div className="sticky top-0 h-screen z-0">
+      <div className="sticky top-0 h-screen z-0 overflow-hidden">
          <motion.div 
             animate={{ opacity: isHomeHidden ? 0 : 1 }} 
             transition={{ duration: 0.5 }}
-            className="w-full h-full relative overflow-hidden"
+            className="size-full"
          >
-            {/* LightRays가 HomeSection 외부에 위치할 경우 여기에 배치 */}
-            {/* <div className="absolute inset-0 z-0 pointer-events-none">
-                <LightRays />
-            </div> */}
-
-            <HomeSection />
+             <HomeSection />
          </motion.div>
       </div>
 
@@ -92,5 +82,5 @@ export default function Home() {
 
       <BottomText y={bottomTextY} />
     </div>
-  ); // return 닫음
-} // function Home 닫음 (이 괄호가 빠졌을 확률이 높습니다)
+  );
+}
