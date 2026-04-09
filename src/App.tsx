@@ -60,7 +60,8 @@ export default function App() {
          <PageTransition key="home">
            
     <Home setGnbTheme={setGnbTheme} />
-<div style={{ width: '100%', height: '600px', position: 'relative' }}>
+<div className="relative h-[600px] flex items-center justify-center">
+
   <LightRays
     raysOrigin="top-center"
     raysColor="#ffffff"
@@ -71,11 +72,16 @@ export default function App() {
     mouseInfluence={0.1}
     noiseAmount={0}
     distortion={0}
-    className="custom-rays"
+    className="absolute inset-0 z-0"
     pulsating={false}
     fadeDistance={1}
     saturation={1}
-/>
+  />
+
+  <h1 className="relative z-10 text-4xl">
+    타이틀
+  </h1>
+
 </div>
           </PageTransition>
         )}
