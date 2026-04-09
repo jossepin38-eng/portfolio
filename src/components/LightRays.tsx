@@ -2,10 +2,10 @@ import { useRef, useEffect } from "react";
 import { Renderer, Program, Triangle, Mesh } from "ogl";
 
 const LightRays = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!ref.current) return;
 
     const renderer = new Renderer({
       dpr: Math.min(window.devicePixelRatio, 2),
@@ -13,10 +13,7 @@ const LightRays = () => {
     });
 
     const gl = renderer.gl;
-    containerRef.current.appendChild(gl.canvas);
-
-    gl.canvas.style.width = "100%";
-    gl.canvas.style.height = "100%";
+    ref.current.appendChild(gl.canvas);
 
     const geometry = new Triangle(gl);
 
@@ -34,40 +31,44 @@ const LightRays = () => {
 
         uniform float iTime;
         uniform vec2 iResolution;
+
         varying vec2 vUv;
 
-        float ray(vec2 uv, vec2 origin, float seed, float speed) {
-          vec2 dir = uv - origin;
-          float angle = atan(dir.x, dir.y);
-          float dist = length(dir);
+        float rayStrength(vec2 raySource, vec2 rayDir, vec2 coord) {
+          vec2 toCoord = coord - raySource;
+          float dist = length(toCoord);
+          vec2 dir = normalize(toCoord);
 
-          float wave = sin(angle * seed + iTime * speed) * 0.5 + 0.5;
-          float rays = pow(wave, 0.2);
+          float angle = dot(dir, rayDir);
 
-          float falloff = smoothstep(1.2, 0.0, dist);
+          float spread = pow(max(angle, 0.0), 8.0);
 
-          return rays * falloff;
+          float wave =
+            0.5 + 0.5 * sin(angle * 30.0 + iTime * 1.5);
+
+          float lengthFade = clamp(1.0 - dist / 1500.0, 0.0, 1.0);
+
+          return spread * wave * lengthFade;
         }
 
         void main() {
-          vec2 uv = vUv;
+          vec2 coord = vUv * iResolution;
 
-          // TOP CENTER
-          vec2 origin = vec2(0.5, 1.0);
+          // TOP CENTER 시작점
+          vec2 raySource = vec2(iResolution.x * 0.5, 0.0);
 
-          // 레이어 2개 (핵심)
-          float r1 = ray(uv, origin, 6.0, 0.4);
-          float r2 = ray(uv, origin, 10.0, 0.2);
+          // 아래 방향
+          vec2 rayDir = normalize(vec2(0.0, 1.0));
+
+          float r1 = rayStrength(raySource, rayDir, coord);
+          float r2 = rayStrength(raySource, rayDir, coord * 0.9);
 
           float rays = r1 * 0.6 + r2 * 0.4;
 
-          // 중앙 집중
-          float mask = smoothstep(0.75, 0.25, abs(uv.x - 0.5));
+          // 중앙 마스크
+          float mask = smoothstep(0.6, 0.2, abs(vUv.x - 0.5));
 
-          // 위쪽 강조
-          float fadeTop = smoothstep(1.0, 0.6, uv.y);
-
-          float intensity = rays * mask * fadeTop;
+          float intensity = rays * mask;
 
           vec3 color = vec3(1.0);
 
@@ -83,42 +84,35 @@ const LightRays = () => {
     const mesh = new Mesh(gl, { geometry, program });
 
     const resize = () => {
-      if (!containerRef.current) return;
+      if (!ref.current) return;
 
-      const { clientWidth, clientHeight } = containerRef.current;
-      renderer.setSize(clientWidth, clientHeight);
+      const w = ref.current.clientWidth;
+      const h = ref.current.clientHeight;
 
-      program.uniforms.iResolution.value = [
-        clientWidth,
-        clientHeight,
-      ];
+      renderer.setSize(w, h);
+      program.uniforms.iResolution.value = [w, h];
     };
 
     window.addEventListener("resize", resize);
     resize();
 
-    let animationId: number;
+    let id: number;
 
-    const update = (t: number) => {
+    const loop = (t: number) => {
       program.uniforms.iTime.value = t * 0.001;
       renderer.render({ scene: mesh });
-      animationId = requestAnimationFrame(update);
+      id = requestAnimationFrame(loop);
     };
 
-    animationId = requestAnimationFrame(update);
+    loop(0);
 
     return () => {
-      cancelAnimationFrame(animationId);
+      cancelAnimationFrame(id);
       window.removeEventListener("resize", resize);
     };
   }, []);
 
-  return (
-    <div
-      ref={containerRef}
-      className="absolute top-0 left-0 w-full h-[600px] pointer-events-none z-[1]"
-    />
-  );
+  return <div ref={ref} className="absolute inset-0 pointer-events-none" />;
 };
 
 export default LightRays;
