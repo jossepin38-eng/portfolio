@@ -179,22 +179,27 @@ function HeroArea() {
   );
 }
 
-// ... HeroArea 함수 등 기존 코드 유지 ...
+
 
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
     <div 
       style={style} 
-      className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden"
+      className="bg-[#0d0d0d] relative w-full h-screen overflow-hidden"
     >
-      {/* 1. LightRays를 배경으로 배치 - 부모 div의 overflow-hidden이 자식의 이탈을 막습니다 */}
-      <div className="absolute inset-0 z-0 pointer-events-none w-full h-full overflow-hidden">
+      {/* 배경 감옥: 이 div가 화면 밖으로 나가는 모든 것을 차단합니다 */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden h-full w-full">
         <LightRays />
       </div>
 
-      {/* 2. Gradient Overlay */}
+      {/* 콘텐츠 레이어: flex를 여기에 주어 중앙 정렬합니다 */}
+      <div className="relative z-10 w-full h-full flex items-center justify-center">
+        <HeroArea />
+      </div>
+
+      {/* 그라데이션 오버레이 */}
       <motion.div 
-        className="absolute inset-0 pointer-events-none z-10"
+        className="absolute inset-0 pointer-events-none z-[5]"
         animate={{ 
           background: [
             "linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0) 100%)",
@@ -202,17 +207,8 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
             "linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0) 100%)"
           ]
         }}
-        transition={{ 
-          duration: 8, 
-          ease: "easeInOut",
-          repeat: Infinity,
-        }}
+        transition={{ duration: 8, ease: "easeInOut", repeat: Infinity }}
       />
-
-      {/* 3. 실제 콘텐츠 - z-20으로 가장 위로 올림 */}
-      <div className="relative z-20 w-full flex justify-center items-center">
-        <HeroArea />
-      </div>
     </div>
   );
 }
