@@ -179,14 +179,18 @@ function HeroArea() {
   );
 }
 
+// ... (상단 import 생략)
+
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
-    <div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center">
+    <div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden">
 
-      {/* LightRays → 배경으로 */}
-      <LightRays className="absolute inset-0 z-0" />
+      {/* 1. LightRays 전용 컨테이너 (이 부분이 핵심입니다) */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <LightRays />
+      </div>
       
-      {/* Gradient */}
+      {/* 2. Background Gradient Overlay */}
       <motion.div 
         className="absolute inset-0 pointer-events-none z-10"
         animate={{ 
@@ -203,8 +207,8 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
         }}
       />
 
-      {/* 텍스트 */}
-      <div className="relative z-20">
+      {/* 3. 실제 콘텐츠: 정중앙 정렬 유지 */}
+      <div className="relative z-20 w-full flex justify-center items-center">
         <HeroArea />
       </div>
 
