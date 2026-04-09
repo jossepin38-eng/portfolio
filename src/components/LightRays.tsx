@@ -19,6 +19,7 @@ const vertex = /* glsl */ `
     }
 `;
 
+const fragment = /* glsl */ `
 precision highp float;
 
 uniform float uTime;
@@ -49,6 +50,7 @@ void main() {
 
     gl_FragColor = vec4(color, intensity * 0.6);
 }
+`;
 
 const LightRays = () => {
   const containerRef = useRef<HTMLDivElement>(null);
