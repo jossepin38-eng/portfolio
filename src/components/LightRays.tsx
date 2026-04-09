@@ -32,15 +32,15 @@ float random(vec2 st) {
 void main() {
     vec2 uv = vUv;
 
-    vec2 center = vec2(0.5, 0.0);
-    vec2 dir = uv - center;
+    vec2 center = vec2(0.5, 1.0);
+    vec2 dir = center - uv;
 
     float angle = atan(dir.x, dir.y);
     float dist = length(dir);
 
     float rays = sin(angle * 20.0 + uTime * 0.8) * 0.5 + 0.5;
 
-    float glow = smoothstep(0.8, 0.0, dist);
+    float glow = smoothstep(1.2, 0.0, dist);
 
     float noise = random(uv + uTime * 0.1) * 0.1;
 
