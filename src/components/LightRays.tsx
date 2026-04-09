@@ -1,175 +1,92 @@
-import React, { useRef, useEffect } from "react";
-import {
-  Renderer,
-  Camera,
-  Transform,
-  Program,
-  Mesh,
-  Triangle,
-} from "ogl";
-
-// 셰이더 정의
-const vertex = /* glsl */ `
-    attribute vec2 position;
-    attribute vec2 uv;
-    varying vec2 vUv;
-    void main() {
-        vUv = uv;
-        gl_Position = vec4(position, 0, 1);
-    }
-`;
-
-const fragment = /* glsl */ `
-precision highp float;
-
-uniform float uTime;
-varying vec2 vUv;
-
-float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.545);
-}
-
-void main() {
-    vec2 uv = vUv;
-
-    vec2 center = vec2(0.5, 1.0);
-    vec2 dir = center - uv;
-
-    float angle = atan(dir.x, dir.y);
-    float dist = length(dir);
-
-    float rays = pow(sin(angle * 6.0 + uTime * 0.4) * 0.5 + 0.5, 0.4);
-
-    float glow = smoothstep(1.5, 0.0, dist);
-
-    float noise = random(uv + uTime * 0.1) * 0.1;
-
-    float horizontalMask = smoothstep(0.7, 0.3, abs(uv.x - 0.5));
-
-    float intensity = smoothstep(0.2, 1.0, rays) * glow * horizontalMask;
-
-    float fadeTop = smoothstep(1.0, 0.7, uv.y);
-
-    intensity *= fadeTop;
-
-    vec3 color = vec3(1.0);
-
-    gl_FragColor = vec4(color, intensity * 0.6);
-}
-`;
+import { useRef, useEffect } from "react";
+import { Renderer, Program, Triangle, Mesh } from "ogl";
 
 const LightRays = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
+    if (!ref.current) return;
 
-    // 성능 최적화: 해상도 비율 제한
-    const dpr = Math.min(window.devicePixelRatio, 1.5);
-
-    // OGL 초기화: 알파 채널(투명도) 허용
-    const renderer = new Renderer({ alpha: true, dpr });
+    const renderer = new Renderer({ alpha: true });
     const gl = renderer.gl;
-    container.appendChild(gl.canvas);
+    ref.current.appendChild(gl.canvas);
 
-    // 캔버스 스타일 (절대 투명)
-    gl.canvas.style.position = "absolute";
-    gl.canvas.style.top = "0";
-    gl.canvas.style.left = "0";
     gl.canvas.style.width = "100%";
     gl.canvas.style.height = "100%";
-    gl.canvas.style.pointerEvents = "none";
 
-    const camera = new Camera(gl);
-    camera.position.z = 1;
-
-    const scene = new Transform();
-
-    // 뷰포트를 채우는 단순한 삼각형 메쉬 (퍼포먼스 최고)
     const geometry = new Triangle(gl);
 
     const program = new Program(gl, {
-      vertex,
-      fragment,
+      vertex: `
+        attribute vec2 position;
+        varying vec2 vUv;
+        void main() {
+          vUv = position * 0.5 + 0.5;
+          gl_Position = vec4(position, 0, 1);
+        }
+      `,
+      fragment: `
+        precision highp float;
+
+        uniform float iTime;
+        uniform vec2 iResolution;
+        varying vec2 vUv;
+
+        void main() {
+          vec2 uv = vUv;
+          vec2 p = uv - vec2(0.5, 1.0);
+
+          float angle = atan(p.x, p.y);
+          float dist = length(p);
+
+          float rays = pow(sin(angle * 6.0 + iTime * 0.3) * 0.5 + 0.5, 0.3);
+
+          float glow = smoothstep(1.2, 0.0, dist);
+
+          float mask = smoothstep(0.6, 0.2, abs(uv.x - 0.5));
+
+          float intensity = rays * glow * mask;
+
+          vec3 color = vec3(1.0);
+
+          gl_FragColor = vec4(color, intensity * 0.9);
+        }
+      `,
       uniforms: {
-        uTime: { value: 0 },
+        iTime: { value: 0 },
+        iResolution: { value: [1, 1] },
       },
-      transparent: true,
-      // Add blending for soft glowing effect
-      blendFunc: { src: gl.SRC_ALPHA, dst: gl.ONE },
     });
 
     const mesh = new Mesh(gl, { geometry, program });
-    mesh.setParent(scene);
-
-    let animationId: number;
-    let isVisible = false;
 
     const resize = () => {
-      if (!container) return;
-      // 부모 컨테이너 크기에 맞춤
-      renderer.setSize(
-        container.clientWidth,
-        container.clientHeight,
-      );
+      if (!ref.current) return;
+      renderer.setSize(ref.current.clientWidth, ref.current.clientHeight);
+      program.uniforms.iResolution.value = [
+        ref.current.clientWidth,
+        ref.current.clientHeight,
+      ];
     };
 
-    window.addEventListener("resize", resize, false);
+    window.addEventListener("resize", resize);
     resize();
 
-    // 렌더 루프
-    const update = (t: number) => {
-      if (!isVisible) return; // 화면 밖이면 연산 완전 중단
-
-      program.uniforms.uTime.value = t * 0.001;
-      renderer.render({ scene, camera });
-      animationId = requestAnimationFrame(update);
+    let id: number;
+    const loop = (t: number) => {
+      program.uniforms.iTime.value = t * 0.001;
+      renderer.render({ scene: mesh });
+      id = requestAnimationFrame(loop);
     };
-
-    // IntersectionObserver로 가시성 체크 (성능 최적화의 핵심)
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting) {
-          if (!isVisible) {
-            isVisible = true;
-            animationId = requestAnimationFrame(update);
-          }
-        } else {
-          isVisible = false;
-          cancelAnimationFrame(animationId);
-        }
-      },
-      {
-        threshold: 0, // 단 1픽셀이라도 보이면 켜고, 완전히 사라지면 끔
-      },
-    );
-
-    observer.observe(container);
+    loop(0);
 
     return () => {
-      observer.disconnect();
-      cancelAnimationFrame(animationId);
+      cancelAnimationFrame(id);
       window.removeEventListener("resize", resize);
-      if (container && gl.canvas.parentNode === container) {
-        container.removeChild(gl.canvas);
-      }
     };
   }, []);
 
-  return (
-    <div
-      ref={containerRef}
-      className="absolute top-0 left-0 w-full h-[600px] z-0 pointer-events-none overflow-hidden"
-      style={{
-        maskImage:
-          "linear-gradient(to bottom, black 60%, transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to bottom, black 60%, transparent 100%)",
-      }}
-    />
-  );
+  return <div ref={ref} className="absolute inset-0 pointer-events-none" />;
 };
 
 export default LightRays;
