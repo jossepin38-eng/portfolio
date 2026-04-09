@@ -181,10 +181,12 @@ function HeroArea() {
 
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
-    <div className="bg-[#0d0d0d] content-stretch flex flex-col items-center relative w-full h-screen justify-center overflow-hidden" data-name="home-section">
-      <LightRays />
+    <div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center">
+
+      {/* LightRays → 배경으로 */}
+      <LightRays className="absolute inset-0 z-0" />
       
-      {/* Subtle Gradient Background Shift */}
+      {/* Gradient */}
       <motion.div 
         className="absolute inset-0 pointer-events-none z-10"
         animate={{ 
@@ -200,7 +202,12 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
           repeat: Infinity,
         }}
       />
-      <HeroArea />
+
+      {/* 텍스트 */}
+      <div className="relative z-20">
+        <HeroArea />
+      </div>
+
     </div>
   );
 }
