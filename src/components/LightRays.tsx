@@ -388,12 +388,15 @@ void main() {
     }
   }, [followMouse]);
 
-  return (
-    <div
-      ref={containerRef}
-      className={`w-full h-full pointer-events-none z-[3] overflow-hidden relative ${className}`.trim()}
-    />
-  );
+  // LightRays.tsx 맨 하단 return 부분 수정
+return (
+  <div
+    ref={containerRef}
+    // relative를 absolute로 변경하고 inset-0을 추가합니다.
+    className={`absolute inset-0 w-full h-full pointer-events-none z-[3] overflow-hidden ${className}`.trim()}
+    style={{ display: 'block' }} // 캔버스 정렬 문제 방지
+  />
+);
 };
 
 export default LightRays;
