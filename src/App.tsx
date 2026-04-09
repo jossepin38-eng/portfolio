@@ -57,7 +57,15 @@ export default function App() {
           </PageTransition>
         ) : (
          <PageTransition key="home">
-            <Home setGnbTheme={setGnbTheme} />
+            <div style={{ position: "relative", height: "600px", overflow: "hidden" }}>
+
+          <LightRays />
+
+          <div style={{ position: "relative", zIndex: 20 }}>
+          <Home setGnbTheme={setGnbTheme} />
+        </div>
+
+</div>
           </PageTransition>
         )}
       </AnimatePresence>
