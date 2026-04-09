@@ -179,22 +179,20 @@ function HeroArea() {
   );
 }
 
-// ... (상단 import 생략)
+// ... HeroArea 함수 등 기존 코드 유지 ...
 
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
-    // 최상위 컨테이너: h-screen과 overflow-hidden으로 영역을 확실히 고정합니다.
     <div 
       style={style} 
       className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden"
     >
-
-      {/* 1. LightRays 배경 레이어: 부모를 절대 벗어나지 않도록 absolute와 overflow-hidden 적용 */}
+      {/* 1. LightRays를 배경으로 배치 - 부모 div의 overflow-hidden이 자식의 이탈을 막습니다 */}
       <div className="absolute inset-0 z-0 pointer-events-none w-full h-full overflow-hidden">
         <LightRays />
       </div>
-      
-      {/* 2. Background Gradient Overlay */}
+
+      {/* 2. Gradient Overlay */}
       <motion.div 
         className="absolute inset-0 pointer-events-none z-10"
         animate={{ 
@@ -211,11 +209,10 @@ export default function HomeSection({ style }: { style?: React.CSSProperties }) 
         }}
       />
 
-      {/* 3. 실제 콘텐츠: z-20으로 가장 위에 올리고 중앙 정렬 */}
+      {/* 3. 실제 콘텐츠 - z-20으로 가장 위로 올림 */}
       <div className="relative z-20 w-full flex justify-center items-center">
         <HeroArea />
       </div>
-
-    </div> // 최상위 컨테이너 닫기
+    </div>
   );
 }
