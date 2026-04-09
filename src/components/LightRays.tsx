@@ -38,7 +38,7 @@ const LightRays = ({
   className = ''
 }) => {
   const containerRef = useRef(null);
-  const canvasParentRef = useRef(null); // 캔버스만 담을 별도의 ref
+  const canvasParentRef = useRef(null);
   const rendererRef = useRef(null);
   const uniformsRef = useRef(null);
   const animationIdRef = useRef(null);
@@ -46,7 +46,6 @@ const LightRays = ({
   const smoothMouseRef = useRef({ x: 0.5, y: 0.5 });
   const [isVisible, setIsVisible] = useState(false);
 
-  // 1. 화면 감지 로직
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), { threshold: 0.1 });
@@ -54,7 +53,6 @@ const LightRays = ({
     return () => observer.disconnect();
   }, []);
 
-  // 2. WebGL 초기화 및 렌더링 로직
   useEffect(() => {
     if (!isVisible || !canvasParentRef.current) return;
 
@@ -62,7 +60,6 @@ const LightRays = ({
     const gl = renderer.gl;
     rendererRef.current = renderer;
 
-    // 캔버스를 부모 크기에 강제로 맞춤 (이탈 방지 핵심)
     gl.canvas.style.display = 'block';
     gl.canvas.style.width = '100%';
     gl.canvas.style.height = '100%';
@@ -70,7 +67,7 @@ const LightRays = ({
     gl.canvas.style.top = '0';
     gl.canvas.style.left = '0';
 
-    canvasParentRef.current.innerHTML = ''; // 기존 캔버스 제거 (중복 생성 방지)
+    canvasParentRef.current.innerHTML = '';
     canvasParentRef.current.appendChild(gl.canvas);
 
     const vert = `attribute vec2 position; varying vec2 vUv; void main() { vUv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0); }`;
@@ -162,7 +159,6 @@ const LightRays = ({
     };
   }, [isVisible, raysOrigin, raysColor, raysSpeed, lightSpread, rayLength, pulsating, fadeDistance, saturation, followMouse, mouseInfluence, noiseAmount, distortion]);
 
-  // 마우스 이동 감지
   useEffect(() => {
     const move = (e) => {
       if (!canvasParentRef.current) return;
