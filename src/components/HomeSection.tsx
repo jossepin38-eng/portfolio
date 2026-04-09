@@ -183,12 +183,16 @@ function HeroArea() {
 
 export default function HomeSection({ style }: { style?: React.CSSProperties }) {
   return (
-    <div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden">
+   // HomeSection.tsx 하단부 수정
+<div className="bg-[#0d0d0d] flex flex-col items-center relative w-full h-screen justify-center overflow-hidden">
 
-      {/* 1. LightRays 전용 컨테이너 (이 부분이 핵심입니다) */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <LightRays />
-      </div>
+  {/* 1. LightRays 전용 컨테이너: h-full w-full을 명시하여 부모를 벗어나지 않게 함 */}
+  <div className="absolute inset-0 z-0 pointer-events-none w-full h-full overflow-hidden">
+    <LightRays />
+  </div>
+  
+  {/* ... 생략 ... */}
+</div>
       
       {/* 2. Background Gradient Overlay */}
       <motion.div 
